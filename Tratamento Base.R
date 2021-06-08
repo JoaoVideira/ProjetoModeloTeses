@@ -1,259 +1,180 @@
 # Configuracoes
-install.packages(c("tidyverse","readxl","geobr","sf","plm","lmtest","spdep","normtest","classInt","spatialreg",
-                  "tseries","units","ggspatial","pmdplyr",dependecies=TRUE ))
 library(tidyverse)
 library(readxl)
 library(geobr)
 library(sf)
-library(plm)
-library(lmtest)
-library(spdep)
-library(normtest)
-library(classInt)
-library(spatialreg)
-library(tseries)
 library(units)
-library(ggspatial)
-library(pmdplyr)
 library(crul)
 library(lwgeom)
+library(sidrar)#bases do SIDRA
+library(deflateBR)# Metodos para deflacionar
 
 # lendo os dados em formato excel (planilhas)
-ICMS <- read_excel("Base de dados ICMS-deflacionado.xlsx",sheet =1)
-ICMSE <- read_excel("Base de dados ICMS-deflacionado.xlsx",sheet =2)
-IFDM <- read_excel("Base de dados ICMS-e.xlsx",sheet =3,col_types = c("text", "text", "numeric", "numeric", "numeric",
-                                                                   "numeric","numeric","numeric","numeric","numeric",
-                                                                      "numeric","numeric","numeric","numeric"))
-POP <- read_excel("Base de dados ICMS-deflacionado.xlsx",sheet =5)
-RECMUNIC <- read_excel("Base de dados ICMS-deflacionado.xlsx",sheet =3)
-DESPMUNIC <- read_excel("Base de dados ICMS-deflacionado.xlsx",sheet =4)
+#Base de Dados Deflacionada
+ICMS <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =1)
+colnames(ICMS)<-c("CODMUNIC","MUNICIPIO","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012",
+                  "2013","2014","2015","2016")
+ICMSpainel<-gather(ICMS,ano,icms,-CODMUNIC,-MUNICIPIO)
+ICMSpainel$ano<-as.numeric(ICMSpainel$ano)
+ICMSpainel$CODMUNIC<-as.character(ICMSpainel$CODMUNIC)
+summary(ICMSpainel)
+ICMSpainel<-filter(ICMSpainel,ano>2004)
+ICMSpainel$CODMUNIC<-str_sub(string = ICMSpainel$CODMUNIC,end= 6)
 
-#Agricultura
-Area.plantada <- read_excel("Agricultura.xlsx",sheet =1)
-valor.producao <- read_excel("Agricultura.xlsx",sheet =2)
-Area.plantada<-Area.plantada[5176:5316,]
-valor.producao<-valor.producao[5176:5316,]
-valor.producao<-rename(valor.producao,CODMUNIC=Cód.)
+ICMSE <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =2)
+colnames(ICMSE)<-c("CODMUNIC","MUNICIPIO","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012",
+                  "2013","2014","2015","2016")
+ICMSEpainel<-gather(ICMSE,ano,icmse,-CODMUNIC,-MUNICIPIO)
+ICMSEpainel$ano<-as.numeric(ICMSEpainel$ano)
+ICMSEpainel$CODMUNIC<-as.character(ICMSEpainel$CODMUNIC)
+summary(ICMSEpainel)
+ICMSEpainel<-filter(ICMSEpainel,ano>2004)
+ICMSEpainel$CODMUNIC<-str_sub(string = ICMSEpainel$CODMUNIC,end= 6)
 
-Plantadapainel<-gather(Area.plantada,ano,area.plantada,-CODMUNIC,-Município)
-Plantadapainel<-mutate(Plantadapainel,area.plantada=as.numeric(area.plantada),ano=as.numeric(ano))
+SAUDE <- read_excel("IFDMEducacao.xlsx")
+SAUDE<-SAUDE[c(5180:5320),-c(2,3,6,8,10,12,14,16,18,20,22,24,26,28)]
+colnames(SAUDE)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+saudepainel<-gather(SAUDE,ano,saude,-CODMUNIC,-MUNICIPIO)
+saudepainel$ano<-as.numeric(saudepainel$ano)
+saudepainel$saude<-as.numeric(saudepainel$saude)
+summary(saudepainel)
+saudepainel$saude<-replace_na(saudepainel$saude,0.6724)
 
-prod.painel<-gather(valor.producao,ano,valor.producao,-CODMUNIC,-Município)
-prod.painel<-mutate(prod.painel,valor.producao=as.numeric(valor.producao),ano=as.numeric(ano))
+Renda_emp <- read_excel("IFDMEmpregoRenda.xlsx")
+Renda_emp<-Renda_emp[c(5180:5320),-c(2,3,6,8,10,12,14,16,18,20,22,24,26,28)]
+colnames(Renda_emp)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+renda_emp_painel<-gather(Renda_emp,ano,renda_emp,-CODMUNIC,-MUNICIPIO)
+renda_emp_painel$ano<-as.numeric(renda_emp_painel$ano)
+renda_emp_painel$renda_emp<-as.numeric(renda_emp_painel$renda_emp)
+summary(renda_emp_painel)
+renda_emp_painel$renda_emp<-replace_na(renda_emp_painel$renda_emp,0.5700)
 
-#valor da producao por hectare de area plantada
-Plantadapainel$prodha<-prod.painel$valor.producao/Plantadapainel$area.plantada
+Educacao <- read_excel("IFDMEducacao.xlsx")
+Educacao<-Educacao[c(5180:5320),-c(2,3,6,8,10,12,14,16,18,20,22,24,26,28)]
+colnames(Educacao)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+educacaopainel<-gather(Educacao,ano,educacao,-CODMUNIC,-MUNICIPIO)
+educacaopainel$ano<-as.numeric(educacaopainel$ano)
+educacaopainel$educacao<-as.numeric(educacaopainel$educacao)
+summary(educacaopainel)
+educacaopainel$educacao<-replace_na(educacaopainel$educacao,0.6724)
+
+# Populacao municipal
+POP <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =8)
+POP<-POP[-c(142:145),]
+colnames(POP)<-c("CODMUNIC","MUNICIPIO","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+poppainel<-gather(POP,ano,populacao,-CODMUNIC,-MUNICIPIO)
+poppainel$ano<-as.numeric(poppainel$ano)
+summary(poppainel)
+poppainel<-filter(poppainel,ano>2004)
+poppainel$CODMUNIC<-as.character(poppainel$CODMUNIC)
+poppainel$CODMUNIC<-str_sub(string = poppainel$CODMUNIC,end= 6)
+
+#Receita Municipal
+RECMUNIC <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =4)
+colnames(RECMUNIC)<-c("CODMUNIC","MUNICIPIO","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+receitapainel<-gather(RECMUNIC,ano,receita,-CODMUNIC,-MUNICIPIO)
+receitapainel$ano<-as.numeric(receitapainel$ano)
+summary(receitapainel)
+receitapainel<-filter(receitapainel,ano>2004)
+receitapainel$CODMUNIC<-as.character(receitapainel$CODMUNIC)
+receitapainel$CODMUNIC<-str_sub(string = receitapainel$CODMUNIC,end= 6)
+
+#Despesa municipal
+DESPMUNIC <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =3)
+colnames(DESPMUNIC)<-c("CODMUNIC","MUNICIPIO","2002","2003","2004","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+despesaapainel<-gather(DESPMUNIC,ano,despesa,-CODMUNIC,-MUNICIPIO)
+despesaapainel$ano<-as.numeric(despesaapainel$ano)
+despesaapainel<-filter(despesaapainel,ano>2004)
+summary(despesaapainel)
+despesaapainel$CODMUNIC<-as.character(despesaapainel$CODMUNIC)
+despesaapainel$CODMUNIC<-str_sub(string = despesaapainel$CODMUNIC,end = 6)
+
+#Gestao Municipal
+gest_ambiental <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =5)
+colnames(gest_ambiental)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+G.ambientalpainel<-gather(gest_ambiental,ano,G.ambiental,-CODMUNIC,-MUNICIPIO)
+G.ambientalpainel$ano<-as.numeric(G.ambientalpainel$ano)
+summary(G.ambientalpainel)
+G.ambientalpainel$CODMUNIC<-as.character(G.ambientalpainel$CODMUNIC)
+G.ambientalpainel$CODMUNIC<-str_sub(string = G.ambientalpainel$CODMUNIC,end = 6)
+
+#Gastos Saneamento
+saneamento <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =6)
+colnames(saneamento)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+saneamentopainel<-gather(saneamento,ano,saneamento,-CODMUNIC,-MUNICIPIO)
+saneamentopainel$ano<-as.numeric(saneamentopainel$ano)
+summary(saneamentopainel)
+saneamentopainel$CODMUNIC<-str_sub(string = saneamentopainel$CODMUNIC,end = 6)
+
+#Agricultura- valor da producao
+#Fonte:https://sidra.ibge.gov.br/tabela/5457
+valor.producao <- read_excel("Agricultura.xlsx",sheet =1)
+valor.producao<-valor.producao[c(5180:5320),]
+colnames(valor.producao)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013",
+                            "2014","2015","2016")
+pro.agropainel<-gather(valor.producao,ano,valor.prod.agro,-CODMUNIC,-MUNICIPIO)
+pro.agropainel$ano<-as.numeric(pro.agropainel$ano)
+pro.agropainel$valor.prod.agro<-as.numeric(pro.agropainel$valor.prod.agro)
+summary(pro.agropainel)
+pro.agropainel$CODMUNIC<-str_sub(string = pro.agropainel$CODMUNIC,end = 6)
 
 #Rebanho
-rebanho <- read_excel("Rebanho.xlsx",sheet =1)
-rebanho<-select(rebanho,c(1,2,18:22))
-colnames(rebanho)<-c("CODMUNIC","MUNICIPIO","2005","2007","2010","2013","2016")
-rebanho<-rebanho[5180:5320,]
+#Fonte:https://sidra.ibge.gov.br/tabela/3939
+rebanho <- read_excel("Rebanho.xlsx")
+colnames(rebanho)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014",
+                     "2015","2016")
+rebanho<-rebanho[5184:5324,]
 rebpainel<-gather(rebanho,ano,rebanho,-CODMUNIC,-MUNICIPIO)
 rebpainel$ano<-as.numeric(rebpainel$ano)
+rebpainel$rebanho<-as.numeric(rebpainel$rebanho)
+summary(rebpainel)
+rebpainel$CODMUNIC<-str_sub(string = rebpainel$CODMUNIC,end = 6)
 
-# Despesas municipais
-DESPMUNIC$Municipio<-as.character(DESPMUNIC$MUNICÍPIO)
-DESPMUNIC$`COD IBGE`<-as.character(DESPMUNIC$`COD IBGE`)
-DESPMUNIC<-rename(DESPMUNIC,CODMUNIC =`COD IBGE`)
-DESPMUNIC<-DESPMUNIC[,-18]
-
-#ICMS
-ICMS<-rename(ICMS,CODMUNIC = "COD IBGE")
-ICMS<-rename(ICMS, "2002"= "Ano 2002", "2003"= "Ano 2003","2004"= "Ano 2004","2005"= "Ano 2005",
-             "2006"= "Ano 2006","2007"= "Ano 2007","2008"= "Ano 2008","2009"= "Ano 2009", "2010"= "Ano 2010",
-             "2011"= "Ano 2011","2012"= "Ano 2012","2013"= "Ano 2013","2014"= "Ano 2014","2015"= "Ano 2015","2016"= "Ano 2016")
-
-ICMS$CODMUNIC<-as.character(ICMS$CODMUNIC)
-
-#ICMSE
-ICMSE<-rename(ICMSE,CODMUNIC = "COD IBGE")
-ICMSE$CODMUNIC<-as.character(ICMSE$CODMUNIC)
-ICMSE<-ICMSE[-142,]
-
-#IFDM
-IFDM<-IFDM[-c(142:166),]
-IFDM<-rename(IFDM,CODMUNIC = "COD IBGE")
-
-#POP
-POP<-POP[-c(142:145),]
-POP<-rename(POP,CODMUNIC = "COD IBGE")
-POP$CODMUNIC<-as.character(POP$CODMUNIC)
-
-#Receitas Municipais
-RECMUNIC<-rename(RECMUNIC,CODMUNIC = "COD IBGE")
-RECMUNIC$CODMUNIC<-as.character(RECMUNIC$CODMUNIC)
-
-#Despesas municipais
-Despmunicpainel<-gather(DESPMUNIC,ano,DESP.MUNIC,-CODMUNIC,-MUNICÍPIO)
-Despmunicpainel$ano<-as.numeric(Despmunicpainel$ano)
-Despmunicpainel<-filter(Despmunicpainel,ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#ICMS 
-ICMSpainel<-gather(ICMS,ano,ICMS,-CODMUNIC,-MUNICÍPIO)
-ICMSpainel$ano<-as.numeric(ICMSpainel$ano)
-ICMSpainel<-filter(ICMSpainel,ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#ICMS Ecologico
-ICMSEpainel<-gather(ICMSE,ano,ICMSE,-CODMUNIC,-MUNICÍPIO)
-ICMSEpainel$ano<-as.numeric(ICMSEpainel$ano)
-ICMSEpainel<-filter(ICMSEpainel,ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#IFDM
-IFDMpainel<-gather(IFDM,ano,IFDM,-CODMUNIC,-MUNICÍPIO)
-IFDMpainel$ano<-as.numeric(IFDMpainel$ano)
-IFDMpainel<-filter(IFDMpainel,ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#Populacao
-Poppainel<-gather(POP,ano,Pop,-CODMUNIC,-Município)
-Poppainel$ano<-as.numeric(Poppainel$ano)
-Poppainel<-filter(Poppainel,ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#Receitas Municipais
-RecMunpainel<-gather(RECMUNIC,ano,receita,-CODMUNIC)
-RecMunpainel$ano<-as.numeric(RecMunpainel$ano)
-
-#DADOS SNIS
-SNIS<-read.csv2("SNIS.csv", sep = ";", stringsAsFactors = FALSE)%>%
-  rename(ano=Ano.de.Referência)%>%
-  mutate(ano=as.numeric(ano))%>%
-  filter(ano==2005|ano==2007|ano==2010|ano==2013|ano==2016)
-
-#Dados Saneamento
-SNIS<-SNIS[,-c(3,7)]
-colnames(SNIS)<-c("CODMUNIC","MUNIC","ano","Pop_urbano")
-SNIS<-select(SNIS,-5)
-SNIS$Pop_urbano<-as.numeric(SNIS$Pop_urbano)
-SNIS[,4] <- gsub("[.]", "",SNIS[,4])
-SNIS$Pop_urbano<-as.double(SNIS$Pop_urbano)
+#Silvicultura - base nao sera utilizada
+#Fonte:https://sidra.ibge.gov.br/tabela/291
+silvicultura <- read_excel("Silvicultura.xlsx")
+silvicultura<-silvicultura[3357:3449,]
 
 #Dados valor da producao do Extrativismo 
-val.prod.ext<- read_excel("Extrativismo.xlsx",sheet =2,col_types = c("text","text","numeric","numeric",
-                          "numeric","numeric","numeric"))
-val.prod.ext<-val.prod.ext[4974:5114,]
-val.prod.ext<-gather(val.prod.ext,ano,Valor.extrat,-CODMUNIC,-Município)
-val.prod.ext$ano<-as.numeric(val.prod.ext$ano)
+#Fonte:https://sidra.ibge.gov.br/tabela/291
+extrativismo<- read_excel("Extrativismo.xlsx")
+extrativismo<-extrativismo[4978:5118,]
+colnames(extrativismo)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
+extratpainel<-gather(extrativismo,ano,extrativismo,-CODMUNIC,-MUNICIPIO)
+extratpainel$ano<-as.numeric(extratpainel$ano)
+extratpainel$extrativismo<-as.numeric(extratpainel$extrativismo)
+summary(extratpainel)
+hist(extratpainel$extrativismo)
+extratpainel$extrativismo<-replace_na(extratpainel$extrativismo,3469)
+extratpainel$CODMUNIC<-str_sub(string = extratpainel$CODMUNIC,end = 6)
 
-#Dados valor da producao do Extrativismo 
-val.prod.sil<- read_excel("Silvicultura.xlsx",sheet =2,
-                          col_types = c("text","text","numeric","numeric",
-                                        "numeric","numeric","numeric"))
-val.prod.sil<-val.prod.sil[3353:3445,]
-val.prod.sil<-gather(val.prod.sil,ano,Valor.extrat,-CODMUNIC,-Município)
-val.prod.sil$ano<-as.numeric(val.prod.sil$ano)
-
-#Criando base painel espacial do MATO GROSSO
-MT2005<-read_municipality(year=2005)%>%
-  filter(code_state=="51")
-MT2007<-read_municipality(year=2007)%>%
-  filter(code_state=="51")
-MT2010<-read_municipality(year=2010)%>%
-  filter(code_state=="51")
-MT2013<-read_municipality(year=2013)%>%
-  filter(code_state=="51")
-MT2016<-read_municipality(year=2016)%>%
-  filter(code_state=="51")
-
-##Juntando para formar o painel 
-#Colocando na mesma coordenada geografica
-crs<-st_crs(MT2005)
-MT2007<-st_transform(MT2007,crs)
-MT2010<-st_transform(MT2010,crs)
-MT2013<-st_transform(MT2013,crs)
-MT2016<-st_transform(MT2016,crs)
-
-#Adicionando variavel ano
-ano<-as.numeric(rep(2005,141))
-MT2005<-cbind(MT2005,ano)
-ano<-as.numeric(rep(2007,141))
-MT2007<-cbind(MT2007,ano)
-ano<-as.numeric(rep(2010,141))
-MT2010<-cbind(MT2010,ano)
-ano<-as.numeric(rep(2013,141))
-MT2013<-cbind(MT2013,ano)
-ano<-as.numeric(rep(2016,141))
-MT2016<-cbind(MT2016,ano)
-
-rm(MTPainel)
-MTPainel<-rbind(MT2005,MT2007,MT2010,MT2013,MT2016)
-MTPainel<-rename(MTPainel,CODMUNIC =code_muni)
-MTPainel<-MTPainel[,-c(3,4)]
-MTPainel$CODMUNIC<-as.character(MTPainel$CODMUNIC)
-
-MTPainel<-left_join(MTPainel,Despmunicpainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,ICMSpainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,ICMSEpainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,IFDMpainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,Poppainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,RecMunpainel,by=c("CODMUNIC","ano"))
-MTPainel<-left_join(MTPainel,SNIS,by=c("CODMUNIC","ano"))
-MTPainel<-MTPainel[,-c(4,6,8,10,12,14,15,16)]
-
-MTPainel<-left_join(MTPainel,Plantadapainel,by=c("CODMUNIC","ano"))
-MTPainel<-MTPainel[,-9]
-MTPainel<-left_join(MTPainel,rebpainel,by=c("CODMUNIC","ano"))
-MTPainel<-MTPainel[,-11]
-
-#Area dos municipios e ajustando unidade de medida
-MTPainel$area<-st_area(MTPainel$geom)
-MTPainel$area<-MTPainel$area/10000
-MTPainel$area<-set_units(MTPainel$area, NULL)
+MTPainel<-full_join(saudepainel,educacaopainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,renda_emp_painel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,ICMSEpainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,ICMSpainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,poppainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,pro.agropainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,rebpainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,extratpainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,receitapainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,despesaapainel,by=c("CODMUNIC","ano"))
+MTPainel<-full_join(MTPainel,G.ambientalpainel,by=c("CODMUNIC","ano"))
+MTPainel<-MTPainel[,-c(2,5,7,9,11,13,15,17,19,21,23,25)]
 
 #Despesas municipais per capita
-MTPainel$despercapita<-MTPainel$DESP.MUNIC/MTPainel$Pop
+MTPainel$despercapita<-MTPainel$despesa/MTPainel$populacao
 
 #ICMS per capita
-MTPainel$ICMSpc<-MTPainel$ICMS/MTPainel$Pop
+MTPainel$ICMSpc<-MTPainel$icms/MTPainel$populacao
 
 #ICMSE per capita
-MTPainel$ICMSEpc<-MTPainel$ICMSE/MTPainel$Pop
+MTPainel$ICMSEpc<-MTPainel$icmse/MTPainel$populacao
 
-#Densidade Populacional
-MTPainel$den.pop<-MTPainel$Pop/MTPainel$area
+# Producao agricola per capita
+MTPainel$prop.plant<-MTPainel$valor.prod.agro/MTPainel$populacao
 
-# Proporcao de area plantada
-MTPainel$prop.plant<-MTPainel$area.plantada/MTPainel$area
+# proporcao de icmse nas receitas municipais
+MTPainel$prop.icmse<-MTPainel$icmse/MTPainel$receita
 
-# Rebanho por hectare
-MTPainel$Reb.hec<-MTPainel$rebanho.y/MTPainel$area
-
-PainelFinal<-MTPainel[,-c(4:6,8,9,11)]
-
-# DADOS Altitude-----------------------------------------------------------
-# FONTE:ftp://geoftp.ibge.gov.br/organizacao_do_territorio/estrutura_territorial/localidades/Geomedia_MDB/
-#Dados sobre Altitude.
-altitude<- read.csv2("Dados Gerais.csv", sep = ";", stringsAsFactors = FALSE)%>%
-  filter(NM_UF=="MATO GROSSO")
-altitude$LONG<-as.double(altitude$LONG)
-altitude$LAT<-as.double(altitude$LAT)
-crs<-st_crs(PainelFinal) 
-altitude<-as_tibble(altitude)
-class(altitude)
-
-#base na classe sf
-altitude_sf<-st_as_sf(altitude,coords = c("LONG","LAT"),crs=crs)%>%
-  group_by(CD_GEOCODMU)%>%
-  summarise(Altitude = median(ALT))
-altitude_sf<-rename(altitude_sf,CODMUNIC=CD_GEOCODMU)
-altitude_sf<-st_drop_geometry(altitude_sf)
-altitude_sf$CODMUNIC<-as.character(altitude_sf$CODMUNIC)
-
-altitude_sf$x2005<-altitude_sf$Altitude
-altitude_sf$x2007<-altitude_sf$Altitude
-altitude_sf$x2010<-altitude_sf$Altitude
-altitude_sf$x2013<-altitude_sf$Altitude
-altitude_sf$x2016<-altitude_sf$Altitude
-
-altitude_sf<-altitude_sf[,-2]
-colnames(altitude_sf)<-c("CODMUNIC","2005","2007","2010","2013","2016")
-altpainel<-gather(altitude_sf,ano,alt.median,-CODMUNIC)
-altpainel$ano<-as.numeric(altpainel$ano)
-
-PainelFinal<-left_join(PainelFinal,altpainel,by=c("CODMUNIC","ano"))
-PainelFinal<-left_join(PainelFinal,val.prod.ext,by=c("CODMUNIC","ano"))
-PainelFinal<-left_join(PainelFinal,val.prod.sil,by=c("CODMUNIC","ano"))
-PainelFinal<-PainelFinal[,-c(13,15,16)]
-
-#Producao por hectare
-PainelFinal$ext.hec<-PainelFinal$Valor.extrat/PainelFinal$area
-PainelFinal<-PainelFinal[,-c(11,13)]
+#valor Producao pre capita
+MTPainel$extcapita<-MTPainel$extrativismo/MTPainel$populacao
