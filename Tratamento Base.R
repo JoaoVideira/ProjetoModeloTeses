@@ -31,7 +31,7 @@ summary(ICMSEpainel)
 ICMSEpainel<-filter(ICMSEpainel,ano>2004)
 ICMSEpainel$CODMUNIC<-str_sub(string = ICMSEpainel$CODMUNIC,end= 6)
 
-SAUDE <- read_excel("IFDMEducacao.xlsx")
+SAUDE <- read_excel("IFDMSaude.xlsx")
 SAUDE<-SAUDE[c(5180:5320),-c(2,3,6,8,10,12,14,16,18,20,22,24,26,28)]
 colnames(SAUDE)<-c("CODMUNIC","MUNICIPIO","2005","2006","2007","2008","2009","2010","2011","2012","2013","2014","2015","2016")
 saudepainel<-gather(SAUDE,ano,saude,-CODMUNIC,-MUNICIPIO)
