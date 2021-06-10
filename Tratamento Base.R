@@ -8,7 +8,6 @@ library(crul)
 library(lwgeom)
 library(sidrar)#bases do SIDRA
 
-
 # lendo os dados em formato excel (planilhas)
 #Base de Dados Deflacionada
 ICMS <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =1)
@@ -163,6 +162,8 @@ MTPainel<-full_join(MTPainel,receitapainel,by=c("CODMUNIC","ano"))
 MTPainel<-full_join(MTPainel,despesaapainel,by=c("CODMUNIC","ano"))
 MTPainel<-full_join(MTPainel,G.ambientalpainel,by=c("CODMUNIC","ano"))
 MTPainel<-MTPainel[,-c(2,5,7,9,11,13,15,17,19,21,23,25)]
+MTPainel<-full_join(MTPainel,saneamentopainel,by=c("CODMUNIC","ano"))
+MTPainel<-MTPainel[,-21]
 
 #Despesas municipais per capita
 MTPainel$despercapita<-MTPainel$despesa/MTPainel$populacao
@@ -181,3 +182,6 @@ MTPainel$prop.icmse<-MTPainel$icmse/MTPainel$receita
 
 #valor Producao pre capita
 MTPainel$extcapita<-MTPainel$extrativismo/MTPainel$populacao
+
+#Gastos saneamento per capita
+MTPainel$saneamentopc<-MTPainel$saneamento/populacao
