@@ -7,7 +7,7 @@ library(units)
 library(crul)
 library(lwgeom)
 library(sidrar)#bases do SIDRA
-library(deflateBR)# Metodos para deflacionar
+
 
 # lendo os dados em formato excel (planilhas)
 #Base de Dados Deflacionada
@@ -78,6 +78,8 @@ summary(receitapainel)
 receitapainel<-filter(receitapainel,ano>2004)
 receitapainel$CODMUNIC<-as.character(receitapainel$CODMUNIC)
 receitapainel$CODMUNIC<-str_sub(string = receitapainel$CODMUNIC,end= 6)
+receitapainel$receita[receitapainel$receita==0] <- mean(receitapainel$receita)
+hist(receitapainel$receita)
 
 #Despesa municipal
 DESPMUNIC <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =3)
@@ -88,6 +90,7 @@ despesaapainel<-filter(despesaapainel,ano>2004)
 summary(despesaapainel)
 despesaapainel$CODMUNIC<-as.character(despesaapainel$CODMUNIC)
 despesaapainel$CODMUNIC<-str_sub(string = despesaapainel$CODMUNIC,end = 6)
+despesaapainel$despesa[despesaapainel$despesa==0] <- mean(despesaapainel$despesa)
 
 #Gestao Municipal
 gest_ambiental <- read_excel("Base de dados ICMS-e_deflacionado_completa.xlsx",sheet =5)
